@@ -35,7 +35,9 @@ The example below shows the most common fields and builtin validations::
 from booby import validators as builtin_validators
 from booby.base import Field
 from booby.models import Model
+from booby.errors import BoobyError
 import datetime
+import inspect
 
 
 class StringField(Field):
@@ -88,20 +90,55 @@ class EmbeddedField(Field):
         return value and value.to_plain() or None
 
 
+def fetch_model(validators):
+    new_validators = []
+    model = None
+    for validator in validators:
+        if inspect.isclass(validator) and issubclass(validator, Model):
+            if model is not None:
+                raise BoobyError('In list field there must '
+                    'be only one model validator')
+            model = validator
+            new_validators.append(builtin_validators.Model(validator))
+        elif isinstance(validator, builtin_validators.Model):
+            if model is not None:
+                raise BoobyError('In list field there must '
+                    'be only one model validator')
+            model = validator.model
+            new_validators.append(validator)
+    return model, new_validators
+
+
+def ensure_iterable(value):
+    if not value:
+        return ()
+    if not isinstance(value, (tuple, list)):
+        value = (value,)
+    return value
+
+
 class ListField(Field):
     """:class:`Field` subclass validates a list of another fields or models.
     """
     def __init__(self, validators, *args, **kwargs):
-        if not isinstance(validators, (tuple, list)):
-            validators = (validators,)
-        validators = map(lambda v: isinstance(v, Model) and \
-            builtin_validators.Model(v) or v, validators)
+        validators = ensure_iterable(validators)
+        self.model, validators = fetch_model(validators)
         super(ListField, self).__init__(
             builtin_validators.List(*validators),
             **kwargs)
 
+    def __set__(self, instance, value):
+        if isinstance(value, (list, tuple)) and len(value) and self.model:
+            if not isinstance(value[0], self.model):
+                value = self.to_python(value)
+
+        super(ListField, self).__set__(instance, value)
+
     def to_plain(self, value):
         return value and map(lambda s: isinstance(s, Model) and s.to_plain(), value) or None
+
+    def to_python(self, value):
+        return value and map(lambda s: self.model(**s), value)
 
 
 class DateTimeField(Field):
@@ -120,11 +157,56 @@ class DateTimeField(Field):
 
 
 class DictField(Field):
-    """:class:`Field` subclass validates a list of another fields or models.
+    """:class:`Field` subclass validates a dict of another fields or models.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, key=None, value=None, *args, **kwargs):
         super(DictField, self).__init__(builtin_validators.Dict(),
             *args, **kwargs)
+        key = ensure_iterable(key)
+        value = ensure_iterable(value)
+        self.key_model, self.key_validators = fetch_model(key)
+        self.value_model, self.value_validators = fetch_model(value)
+
+    def __set__(self, instance, value):
+        if isinstance(value, dict) and len(value) \
+        and (self.key_model or self.value_model):
+            first_key, first_value = value.iteritems().next()
+            if (self.value_model and not isinstance(first_value, self.value_model)) \
+            or (self.key_model and not isinstance(first_key, self.key_model)):
+                value = self.to_python(value)
+
+        super(DictField, self).__set__(instance, value)
+
+    def validate(self, value):
+        super(DictField, self).validate(value)
+        if value and (self.key_validators or self.value_validators):
+            for key, value in value.iteritems():
+                for validator in self.key_validators:
+                    validator.validate(key)
+                for validator in self.value_validators:
+                    validator.validate(value)
+
+    def to_plain(self, value):
+        if not value:
+            return None
+        result = {}
+        for key, value in value.iteritems():
+            key = isinstance(key, Model) and key.to_plain() or key
+            value = isinstance(value, Model) and value.to_plain() or value
+            result[key] = value
+        return result
+
+    def to_python(self, value):
+        if not value:
+            return None
+        result = {}
+        for key, value in value.iteritems():
+            if self.key_model:
+                key = self.key_model(**key)
+            if self.value_model:
+                value = self.value_model(**value)
+            result[key] = value
+        return result
 
 
 class EmailField(Field):

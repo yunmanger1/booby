@@ -4,7 +4,7 @@ from hamcrest import *
 from doublex import Stub
 from nose.tools import assert_raises, assert_raises_regexp
 
-from booby import fields, errors, models
+from booby import fields, errors, models, validators
 import datetime
 
 
@@ -172,3 +172,61 @@ class TestDateFieldToPlain(object):
     def setup(self):
         self.field = fields.DateTimeField()
         self.format_field = fields.DateTimeField(format="%Y")
+
+
+class TestDictField(object):
+    def test_when_no_key_validators(self):
+        m = SimpleDictModel(data={})
+        m.validate()
+
+    def test_when_dict_of_plain_assigned(self):
+        m = DictModel()
+        m.data = {1: {'length': 4}}
+        assert_that(m.data, instance_of(dict))
+        assert_that(m.data[1], instance_of(LengthModel))
+        assert_that(m.data[1].length, instance_of(int))
+        m.validate()
+
+    def test_when_dict_of_typed_assigned(self):
+        m = DictModel()
+        m.data = {1: LengthModel(length=4)}
+        assert_that(m.data, instance_of(dict))
+        assert_that(m.data[1], instance_of(LengthModel))
+        assert_that(m.data[1].length, instance_of(int))
+        m.validate()
+
+
+class TestListField(object):
+
+    def test_when_list_of_plain_dicts_assigned(self):
+        m = ListModel()
+        m.data = [{'length': 4}, {'length': 3}]
+        assert_that(m.data, instance_of(list))
+        assert_that(m.data[0], instance_of(LengthModel))
+        assert_that(m.data[0].length, instance_of(int))
+        m.validate()
+
+    def test_when_list_of_typed_assigned(self):
+        m = ListModel()
+        m.data = [LengthModel(length=4), LengthModel(length=3)]
+        assert_that(m.data, instance_of(list))
+        assert_that(m.data[0], instance_of(LengthModel))
+        assert_that(m.data[0].length, instance_of(int))
+        assert_that(m.to_plain(), has_entries(data=has_item({'length': 3})))
+        m.validate()
+
+
+class SimpleDictModel(models.Model):
+    data = fields.DictField()
+
+
+class LengthModel(models.Model):
+    length = fields.IntegerField()
+
+
+class DictModel(models.Model):
+    data = fields.DictField(key=validators.Integer, value=validators.Model(LengthModel))
+
+
+class ListModel(models.Model):
+    data = fields.ListField(LengthModel)
