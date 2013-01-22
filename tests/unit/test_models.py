@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import json
+import anyjson as json
 
 from hamcrest import *
 from nose.tools import assert_raises_regexp
 
 from booby import errors, fields, models
+import datetime
 
 
 class TestDefaultModelInit(object):
@@ -161,6 +162,46 @@ class TestModelToDict(object):
         ))
 
 
+class TestModelToPlainDict(object):
+
+    def test_when_model_has_a_date(self):
+        now = datetime.datetime.utcnow()
+        obj = ModelWithDate(time=now)
+        assert_that(obj.to_plain(), has_entries(time=str(now.year)))
+
+    def test_when_model_has_a_date_and_embedded(self):
+        now = datetime.datetime.utcnow()
+        obj = ModelWithDate(time=now, another=AnotherModelWithDate(time=now))
+        assert_that(obj.to_plain(), has_entries(
+            time=str(now.year),
+            another=has_entries(time=str(now.year))
+            ))
+
+
+class TestModelFromPlainDict(object):
+
+    def test_user_from_plain_dict(self):
+        user = User.from_plain_dict({'name': 'joe', 'email': 'joe@gmail.com'})
+        user.validate()
+
+    def test_from_plain_dict_when_date(self):
+        now = datetime.datetime.utcnow()
+        obj1 = AnotherModelWithDate(time=now)
+        obj1.validate()
+        obj2 = AnotherModelWithDate.from_plain_dict(obj1.to_plain())
+        obj2.validate()
+
+    def test_update_from_plain_dict(self):
+        obj = ModelWithUser.from_plain_dict(
+            {'age': 18, 'user': {
+                'name': 'joe',
+                'email': 'joe@gmail.com'}})
+        obj.validate()
+        obj.update(plain_=True, user={'email': 'joe.smith@gmail.com'})
+        assert_that(obj.user.email, equal_to('joe.smith@gmail.com'))
+        assert_that(obj.user.name, equal_to('joe'))
+
+
 class TestModelToJSON(object):
     def test_when_model_has_single_fields_then_returns_json_with_fields_values(self):
         user = User(name=u'Jack', email=u'jack@example.com')
@@ -187,3 +228,17 @@ class UserMixin(object):
 
 class UserWithEmail(UserMixin, models.Model):
     email = fields.StringField()
+
+
+class AnotherModelWithDate(models.Model):
+    time = fields.DateTimeField(format='%Y')
+
+
+class ModelWithDate(models.Model):
+    time = fields.DateTimeField(format='%Y')
+    another = fields.EmbeddedField(AnotherModelWithDate, required=False)
+
+
+class ModelWithUser(models.Model):
+    user = fields.EmbeddedField(User)
+    age = fields.IntegerField()

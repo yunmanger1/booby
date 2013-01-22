@@ -5,6 +5,7 @@ from doublex import Stub
 from nose.tools import assert_raises, assert_raises_regexp
 
 from booby import fields, errors, models
+import datetime
 
 
 class TestFieldInit(object):
@@ -150,3 +151,24 @@ class TestEmbeddedFieldBuildtinValidators(object):
 
     def setup(self):
         self.field = fields.EmbeddedField(User)
+
+
+class TestDateFieldToPlain(object):
+    def test_when_format_is_not_set(self):
+        value = '2013-01-19 14:30:55'
+        date = datetime.datetime.strptime(value,
+            '%Y-%m-%d %H:%M:%S')
+        assert_that(self.field.to_plain(date), equal_to(value))
+
+    def test_when_format_is_set(self):
+        value = '2013-01-19 14:30:55'
+        date = datetime.datetime.strptime(value,
+            '%Y-%m-%d %H:%M:%S')
+        assert_that(self.format_field.to_plain(date), equal_to('2013'))
+
+    def test_when_value_is_None(self):
+        assert_that(self.format_field.to_plain(None), equal_to(None))
+
+    def setup(self):
+        self.field = fields.DateTimeField()
+        self.format_field = fields.DateTimeField(format="%Y")

@@ -33,48 +33,9 @@ The example below shows the most common fields and builtin validations::
 """
 
 from booby import validators as builtin_validators
-
-
-class Field(object):
-    """This is the base class for all :mod:`booby.fields`. This class
-    can also be used as field in any :class:`models.Model` declaration.
-
-    :param default: This field default value.
-    :param required: If `True` this field value should not be `None`.
-    :param choices: A `list` of values where this field value should be in.
-    :param \*validators: A list of field :mod:`validators` as positional arguments.
-
-    """
-
-    def __init__(self, *validators, **kwargs):
-        self.options = kwargs
-
-        self.default = kwargs.get('default')
-
-        # Setup field validators
-        self.validators = []
-
-        if kwargs.get('required'):
-            self.validators.append(builtin_validators.Required())
-
-        choices = kwargs.get('choices')
-
-        if choices:
-            self.validators.append(builtin_validators.In(choices))
-
-        self.validators.extend(validators)
-
-    def __get__(self, instance, owner):
-        if instance is not None:
-            return instance._data.get(self, self.default)
-        return self
-
-    def __set__(self, instance, value):
-        instance._data[self] = value
-
-    def validate(self, value):
-        for validator in self.validators:
-            validator.validate(value)
+from booby.base import Field
+from booby.models import Model
+import datetime
 
 
 class StringField(Field):
@@ -122,6 +83,48 @@ class EmbeddedField(Field):
             value = self.model(**value)
 
         super(EmbeddedField, self).__set__(instance, value)
+
+    def to_plain(self, value):
+        return value and value.to_plain() or None
+
+
+class ListField(Field):
+    """:class:`Field` subclass validates a list of another fields or models.
+    """
+    def __init__(self, validators, *args, **kwargs):
+        if not isinstance(validators, (tuple, list)):
+            validators = (validators,)
+        validators = map(lambda v: isinstance(v, Model) and \
+            builtin_validators.Model(v) or v, validators)
+        super(ListField, self).__init__(
+            builtin_validators.List(*validators),
+            **kwargs)
+
+    def to_plain(self, value):
+        return value and map(lambda s: isinstance(s, Model) and s.to_plain(), value) or None
+
+
+class DateTimeField(Field):
+    """:class:`Field` subclass validates a list of another fields or models.
+    """
+    def __init__(self, *args, **kwargs):
+        super(DateTimeField, self).__init__(builtin_validators.DateTime(),
+            *args, **kwargs)
+        self.format = self.options.get('format', '%Y-%m-%d %H:%M:%S')
+
+    def to_plain(self, value):
+        return value and value.strftime(self.format) or value
+
+    def to_python(self, value):
+        return value and datetime.datetime.strptime(value, self.format)
+
+
+class DictField(Field):
+    """:class:`Field` subclass validates a list of another fields or models.
+    """
+    def __init__(self, *args, **kwargs):
+        super(DictField, self).__init__(builtin_validators.Dict(),
+            *args, **kwargs)
 
 
 class EmailField(Field):

@@ -17,7 +17,8 @@
 
 from booby.models import Model
 from booby.fields import (StringField, IntegerField, FloatField, BooleanField,
-    EmbeddedField, EmailField)
+    EmbeddedField, EmailField, ListField, DateTimeField, DictField)
 
 __all__ = ['Model', 'StringField', 'IntegerField', 'FloatField',
-    'BooleanField', 'EmbeddedField', 'EmailField']
+    'BooleanField', 'EmbeddedField', 'EmailField', 'ListField',
+    'DateTimeField', 'DictField']

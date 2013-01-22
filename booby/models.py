@@ -38,25 +38,10 @@ Something like this::
     '{"owner": {"login": "jaimegildesagredo", "name": "Jaime Gil de Sagredo"}, "name": "Booby"}'
 """
 
-import json
+import anyjson as json
 
-from booby import fields, errors
-
-
-class ModelMeta(type):
-    def __new__(cls, name, bases, attrs):
-        attrs['_fields'] = {}
-
-        for base in bases:
-            for k, v in base.__dict__.iteritems():
-                if isinstance(v, fields.Field):
-                    attrs['_fields'][k] = v
-
-        for k, v in attrs.iteritems():
-            if isinstance(v, fields.Field):
-                attrs['_fields'][k] = v
-
-        return super(ModelMeta, cls).__new__(cls, name, bases, attrs)
+from booby import errors
+from booby.base import ModelMeta
 
 
 class Model(object):
@@ -101,6 +86,9 @@ class Model(object):
         raise errors.FieldError("'{}' model has no field '{}'".format(
             type(self).__name__, name))
 
+    def __contains__(self, k):
+        return k in self._fields
+
     def __getitem__(self, k):
         if k not in self._fields:
             self.__raise_field_error(k)
@@ -113,23 +101,31 @@ class Model(object):
 
         setattr(self, k, v)
 
-    def update(self, dict_=None, **kwargs):
+    def update(self, dict_=None, plain_=False, **kwargs):
         """This method updates the `model` fields values with the given dict.
         The model can be updated passing a dict object or keyword arguments,
         like the Python's builtin :func:`dict.update`.
 
         :param dict_: A dict with the new field values.
+        :param plain_: True if values are plain values.
         :param \*\*kwargs: Keyword arguments with the new field values.
         """
 
         if dict_ is not None:
-            self._update(dict_)
+            self._update(dict_, plain=plain_)
         else:
-            self._update(kwargs)
+            self._update(kwargs, plain=plain_)
 
-    def _update(self, values):
+    def _update(self, values, plain=False):
         for k, v in values.iteritems():
-            self[k] = v
+            value = k in self and self[k] or None
+            if value and isinstance(value, Model) and isinstance(v, dict):
+                value._update(v, plain=plain)
+            else:
+                if plain:
+                    self[k] = self._fields[k].to_python(v)
+                else:
+                    self[k] = v
 
     def validate(self):
         """This method validates the entire `model`. That is, validates
@@ -156,6 +152,15 @@ class Model(object):
                 result[field] = value
         return result
 
+    def to_plain(self):
+        """This method returns the `model` as a `dict`."""
+
+        result = {}
+        for field in self._fields:
+            value = getattr(self, field)
+            result[field] = self._fields[field].to_plain(value)
+        return result
+
     def to_json(self):
         """This method returns the `model` as a `json string`.
 
@@ -164,4 +169,14 @@ class Model(object):
 
         """
 
-        return json.dumps(self.to_dict())
+        return json.dumps(self.to_plain())
+
+    @classmethod
+    def from_plain_dict(cls, plain_dict):
+        obj = cls()
+        obj.update(dict_=plain_dict, plain_=True)
+        return obj
+
+    @classmethod
+    def from_json(cls, json_string):
+        return cls.from_plain_dict(json.loads(json_string))

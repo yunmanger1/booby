@@ -28,6 +28,7 @@ arguments.
 
 import re
 import functools
+from datetime import datetime
 
 from booby import errors
 
@@ -173,6 +174,7 @@ class List(object):
     def __init__(self, *validators):
         self.validators = validators
 
+    @nullable
     def validate(self, value):
         if not isinstance(value, list):
             raise errors.ValidationError('should be a list')
@@ -180,3 +182,22 @@ class List(object):
         for i in value:
             for validator in self.validators:
                 validator.validate(i)
+
+
+class DateTime(object):
+    """This validator forces field values to be a :keyword:`datetime`.
+    """
+    @nullable
+    def validate(self, value):
+        if not isinstance(value, datetime):
+            raise errors.ValidationError('should be a datetime')
+
+
+class Dict(object):
+    """This validator forces field values to be a :keyword:`datetime`.
+    """
+
+    @nullable
+    def validate(self, value):
+        if not isinstance(value, dict):
+            raise errors.ValidationError('should be a dict')

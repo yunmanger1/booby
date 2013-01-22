@@ -122,9 +122,8 @@ class TestList(object):
         with assert_raises_regexp(errors.ValidationError, 'should be a list'):
             self.validator.validate(object())
 
-    def test_when_value_is_none_then_raises_validation_error(self):
-        with assert_raises_regexp(errors.ValidationError, 'should be a list'):
-            self.validator.validate(None)
+    def test_when_value_is_none_then_does_not_raise(self):
+        self.validator.validate(None)
 
     def test_when_value_is_a_list_then_does_not_raise(self):
         self.validator.validate(['foo', 'bar'])
@@ -140,6 +139,37 @@ class TestList(object):
 
     def setup(self):
         self.validator = validators.List()
+
+
+class TestDict(object):
+    def test_when_value_is_not_a_dict_then_raises_validation_error(self):
+        with assert_raises_regexp(errors.ValidationError, 'should be a dict'):
+            self.validator.validate(object())
+
+    def test_when_value_is_none_then_does_not_raise(self):
+        self.validator.validate(None)
+
+    def test_when_value_is_a_dict_then_does_not_raise(self):
+        self.validator.validate({})
+
+    def setup(self):
+        self.validator = validators.Dict()
+
+
+class TestDatetime(object):
+    def test_when_value_is_not_a_dict_then_raises_validation_error(self):
+        with assert_raises_regexp(errors.ValidationError, 'should be a datetime'):
+            self.validator.validate(object())
+
+    def test_when_value_is_none_then_does_not_raise(self):
+        self.validator.validate(None)
+
+    def test_when_value_is_a_dict_then_does_not_raise(self):
+        import datetime
+        self.validator.validate(datetime.datetime.utcnow())
+
+    def setup(self):
+        self.validator = validators.DateTime()
 
 
 class TestEmail(StringMixin):
