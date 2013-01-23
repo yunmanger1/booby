@@ -215,6 +215,20 @@ class TestListField(object):
         assert_that(m.to_plain(), has_entries(data=has_item({'length': 3})))
         m.validate()
 
+    def test_when_list_of_int_to_python(self):
+        s = ListIntFieldModel()
+        s.d = [1, 2, 3]
+        s.validate()
+        assert_that(s.d, equal_to([1, 2, 3]))
+
+    def test_when_int_list_to_python(self):
+        f = fields.ListField(validators.Integer)
+        assert_that(f.to_python([1, 2, 3]), equal_to([1, 2, 3]))
+
+
+class ListIntFieldModel(models.Model):
+    d = fields.ListField(validators.Integer)
+
 
 class SimpleDictModel(models.Model):
     data = fields.DictField()

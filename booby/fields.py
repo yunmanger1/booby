@@ -138,7 +138,7 @@ class ListField(Field):
         return value and map(lambda s: isinstance(s, Model) and s.to_plain(), value) or None
 
     def to_python(self, value):
-        return value and map(lambda s: self.model(**s), value)
+        return value and map(lambda s: self.model and self.model(**s) or s, value)
 
 
 class DateTimeField(Field):
