@@ -135,10 +135,12 @@ class ListField(Field):
         super(ListField, self).__set__(instance, value)
 
     def to_plain(self, value):
-        return value and map(lambda s: isinstance(s, Model) and s.to_plain(), value) or None
+        return value and map(lambda s: isinstance(s, Model) \
+            and s.to_plain() or s, value) or None
 
     def to_python(self, value):
-        return value and map(lambda s: self.model and self.model(**s) or s, value)
+        return value and map(lambda s: self.model and \
+            self.model(**s) or s, value) or value
 
 
 class DateTimeField(Field):
@@ -153,7 +155,7 @@ class DateTimeField(Field):
         return value and value.strftime(self.format) or value
 
     def to_python(self, value):
-        return value and datetime.datetime.strptime(value, self.format)
+        return value and datetime.datetime.strptime(value, self.format) or value
 
 
 class DictField(Field):

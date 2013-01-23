@@ -225,6 +225,10 @@ class TestListField(object):
         f = fields.ListField(validators.Integer)
         assert_that(f.to_python([1, 2, 3]), equal_to([1, 2, 3]))
 
+    def test_when_int_list_to_plain(self):
+        f = fields.ListField(validators.Integer)
+        assert_that(f.to_plain([1, 2, 3]), equal_to([1, 2, 3]))
+
 
 class ListIntFieldModel(models.Model):
     d = fields.ListField(validators.Integer)
