@@ -19,7 +19,6 @@ class Field(object):
 
         # Setup field validators
         self.validators = []
-
         if kwargs.get('required'):
             self.validators.append(builtin_validators.Required())
 

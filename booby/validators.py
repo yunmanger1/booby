@@ -178,7 +178,6 @@ class List(object):
     def validate(self, value):
         if not isinstance(value, list):
             raise errors.ValidationError('should be a list')
-
         for i in value:
             for validator in self.validators:
                 validator.validate(i)

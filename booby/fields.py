@@ -91,22 +91,26 @@ class EmbeddedField(Field):
 
 
 def fetch_model(validators):
-    new_validators = []
+    inner_validators, model_validators = [], []
     model = None
+    all_classes = tuple(v[1] for v in inspect.getmembers(
+        builtin_validators, inspect.isclass))
     for validator in validators:
         if inspect.isclass(validator) and issubclass(validator, Model):
             if model is not None:
                 raise BoobyError('In list field there must '
                     'be only one model validator')
             model = validator
-            new_validators.append(builtin_validators.Model(validator))
+            model_validators.append(builtin_validators.Model(validator))
         elif isinstance(validator, builtin_validators.Model):
             if model is not None:
                 raise BoobyError('In list field there must '
                     'be only one model validator')
             model = validator.model
-            new_validators.append(validator)
-    return model, new_validators
+            model_validators.append(validator)
+        elif isinstance(validator, all_classes):
+            inner_validators.append(validator)
+    return model, model_validators, inner_validators
 
 
 def ensure_iterable(value):
@@ -119,10 +123,18 @@ def ensure_iterable(value):
 
 class ListField(Field):
     """:class:`Field` subclass validates a list of another fields or models.
+
+    Parameters:
+    ----------
+    ``validators`` - iterable
+        Should contain one subclass of  models.Model or
+        one subclass of builtin validators
     """
     def __init__(self, validators, *args, **kwargs):
         validators = ensure_iterable(validators)
-        self.model, validators = fetch_model(validators)
+        self.model, validators, inner_validators = fetch_model(validators)
+        if(not validators):
+            validators = inner_validators
         super(ListField, self).__init__(
             builtin_validators.List(*validators),
             **kwargs)

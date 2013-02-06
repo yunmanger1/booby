@@ -123,7 +123,7 @@ class TestList(object):
             self.validator.validate(object())
 
     def test_when_value_is_none_then_does_not_raise(self):
-        self.validator.validate(None)
+        self.validator.validate(['a'])
 
     def test_when_value_is_a_list_then_does_not_raise(self):
         self.validator.validate(['foo', 'bar'])
@@ -131,14 +131,50 @@ class TestList(object):
     def test_when_inner_validator_raises_validation_error_then_raises_validation_error(self):
         with Stub() as inner:
             inner.validate('bar').raises(errors.ValidationError('invalid'))
-
+            inner.validate()
         self.validator = validators.List(Stub(), inner)
 
         with assert_raises_regexp(errors.ValidationError, 'invalid'):
             self.validator.validate(['foo', 'bar'])
 
+    def test_with_inner_validator_String_when_item_value_is_string_then_does_not_raise(self):
+        self.complex_validator.validate(['foo'])
+
+    def test_with_inner_validator_String_when_item_value_is_not_string_then_does_raise(self):
+        with assert_raises_regexp(errors.ValidationError, 'should be a string'):
+            self.complex_validator.validate([1, 2, 3])
+
     def setup(self):
         self.validator = validators.List()
+        self.complex_validator = validators.List(validators.String())
+
+
+class TestListWithInners(object):
+
+    def test_when_list_field_raises_then_model_raises(self):
+        with assert_raises(errors.ValidationError):
+            c = Cell(m='a')
+            c.validate()
+        with assert_raises(errors.ValidationError):
+            c = Cell(m=self.test_b)
+            self.validator.validate(Cell(m=[1, 2, 3, 4]))
+
+    def test_when_inner_type_validators_are_more_then_one_then_model_raises(self):
+        with assert_raises(errors.BoobyError):
+            self.wrong_model.validate()
+
+    def test_when_thereis_at_least_one_model_then_should_use_model_validator(self):
+        with assert_raises_regexp(TypeError, "must be a mapping"):
+            c = CellWithModelModifier(m=[object()])
+            c.validate()
+
+    def setup(self):
+        self.test_a = ['a', 'b', 'c']
+        self.test_b = [1, 2]
+        self.test_c = ['a', 'ww']
+        self.model = Cell(m=['a', 'b', 'c'])
+        self.wrong_model = AnotherCell(m=[1, 2, 3])
+        self.validator = validators.Model(Cell)
 
 
 class TestDict(object):
@@ -188,5 +224,21 @@ class TestEmail(StringMixin):
         self.validator = validators.Email()
 
 
-class User(models.Model):
-    name = fields.StringField()
+# class User(models.Model):
+#     name = fields.StringField()
+
+
+class Cell(models.Model):
+    m = fields.ListField([validators.String(), validators.In(choices=['a'])])
+
+
+class AnotherCell(models.Model):
+    m = fields.ListField([validators.String(), validators.Integer, validators.In(choices=['a'])])
+
+
+class Modifier(models.Model):
+    l = fields.StringField()
+
+
+class CellWithModelModifier(models.Model):
+    m = fields.ListField([validators.Model(Modifier)])
