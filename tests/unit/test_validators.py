@@ -224,8 +224,8 @@ class TestEmail(StringMixin):
         self.validator = validators.Email()
 
 
-# class User(models.Model):
-#     name = fields.StringField()
+class User(models.Model):
+    name = fields.StringField()
 
 
 class Cell(models.Model):
