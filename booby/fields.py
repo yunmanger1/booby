@@ -178,8 +178,8 @@ class DictField(Field):
             *args, **kwargs)
         key = ensure_iterable(key)
         value = ensure_iterable(value)
-        self.key_model, self.key_validators = fetch_model(key)
-        self.value_model, self.value_validators = fetch_model(value)
+        self.key_model, self.key_validators, _ = fetch_model(key)
+        self.value_model, self.value_validators, _ = fetch_model(value)
 
     def __set__(self, instance, value):
         if isinstance(value, dict) and len(value) \
