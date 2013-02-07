@@ -119,6 +119,8 @@ class Model(object):
     def _update(self, values, plain=False):
         for k, v in values.iteritems():
             value = k in self and self[k] or None
+            if not k in self:
+                continue
             if value and isinstance(value, Model) and isinstance(v, dict):
                 value._update(v, plain=plain)
             else:
