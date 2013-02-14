@@ -52,6 +52,19 @@ class IntegerField(Field):
 
     def __init__(self, *args, **kwargs):
         super(IntegerField, self).__init__(builtin_validators.Integer(), *args, **kwargs)
+        min_value = kwargs.get('min_value')
+        max_value = kwargs.get('max_value')
+        if min_value:
+            self.validators.append(builtin_validators.Min(min_value))
+        if max_value:
+            self.validators.append(builtin_validators.Max(max_value))
+
+    def __set__(self, instance, value):
+        try:
+            value = value and int(value) or None
+        except ValueError:
+            raise BoobyError("Should contain only integer values.")
+        super(IntegerField, self).__set__(instance, value)
 
 
 class FloatField(Field):
@@ -59,6 +72,12 @@ class FloatField(Field):
 
     def __init__(self, *args, **kwargs):
         super(FloatField, self).__init__(builtin_validators.Float(), *args, **kwargs)
+        min_value = kwargs.get('min_value')
+        max_value = kwargs.get('max_value')
+        if min_value:
+            self.validators.append(builtin_validators.Min(min_value))
+        if max_value:
+            self.validators.append(builtin_validators.Max(max_value))
 
 
 class BooleanField(Field):
@@ -167,7 +186,9 @@ class DateTimeField(Field):
         return value and value.strftime(self.format) or value
 
     def to_python(self, value):
-        return value and datetime.datetime.strptime(value, self.format) or value
+        if(isinstance(value, datetime.datetime)):
+            return value
+        return value and datetime.datetime.strptime(value, self.format) or None
 
 
 class DictField(Field):

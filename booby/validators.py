@@ -92,6 +92,32 @@ class String(object):
             raise errors.ValidationError('should be a string')
 
 
+class Min(object):
+    r"""This validator forces Integer field to be more than or
+        equal to `min_value`"""
+    def __init__(self, min_value):
+        self.min_value = min_value
+
+    @nullable
+    def validate(self, value):
+        if self.min_value > value:
+            raise errors.ValidationError('Should be more than or equal to '
+                'value {}'.format(self.min_value))
+
+
+class Max(object):
+    r"""This validator forces Integer field to be less than or
+        equal to `max_value`"""
+    def __init__(self, max_value):
+        self.max_value = max_value
+
+    @nullable
+    def validate(self, value):
+        if self.max_value < value:
+            raise errors.ValidationError('Should be less than or equal to '
+                'value {}'.format(self.max_value))
+
+
 class Integer(object):
     """This validator forces fields values to be an instance of `int`."""
 
