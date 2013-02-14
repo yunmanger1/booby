@@ -60,11 +60,14 @@ class IntegerField(Field):
             self.validators.append(builtin_validators.Max(max_value))
 
     def __set__(self, instance, value):
-        try:
-            value = value and int(value) or None
-        except ValueError:
-            raise BoobyError("Should contain only integer values.")
-        super(IntegerField, self).__set__(instance, value)
+        if value is not None and int(value) == 0:
+            super(IntegerField, self).__set__(instance, value)
+        else:
+            try:
+                value = (value is not None) and int(value) or None
+            except ValueError:
+                raise BoobyError("Should contain only integer values.")
+            super(IntegerField, self).__set__(instance, value)
 
 
 class FloatField(Field):
