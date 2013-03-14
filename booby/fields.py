@@ -61,7 +61,7 @@ class IntegerField(Field):
 
     def __set__(self, instance, value):
         try:
-            value = value and int(value) or None
+            value = value is not None and int(value) or None
         except ValueError:
             raise BoobyError("Should contain only integer values.")
         super(IntegerField, self).__set__(instance, value)
